@@ -1,0 +1,70 @@
+---
+- hosts: linux
+  remote_user: root
+
+  tasks:
+
+#aceleramos SSH que sino va muy lento  
+  - name: descargar sshd_config tuneado
+    get_url:
+      url: http://128.64.80.50/root/ansible/raw/master/sshd_config
+      dest: /etc/ssh/sshd_config
+      mode: 0600
+      force: yes
+    register: sshd_config
+  - name: reiniciar sshd
+    service: name=sshd state=restarted
+
+#sincronizamos tiempo
+  - name: instalar ntpd
+    yum: name=ntp state=present
+  - name: descargar ntp.conf
+    get_url:
+      url: http://128.64.80.50/root/ansible/raw/master/ntp.conf
+      dest: /etc/ntp.conf
+      mode: 0644
+      force: yes
+    register: ntp_conf
+  - name: habilitar ntpd
+    service: name=ntpd enabled=yes
+  - name: reiniciar ntpd
+    service: name=ntpd state=restarted
+
+#repositorio Epel
+  - name: epel-release
+    yum: name=epel-release state=present
+
+#Ahora instalamos el software basico
+  - name: wget
+    yum: name=wget state=present
+  - name: telnet
+    yum: name=telnet state=present
+  - name: unzip
+    yum: name=unzip state=present
+  - name: nano
+    yum: name=nano state=present
+  - name: open-vm-tools
+    yum: name=open-vm-tools state=latest
+  - name: mlocate
+    yum: name=mlocate state=latest
+
+#una vez instalado mlocate, actualizamos los indices del FS
+  - name: actualizar la bbdd de locate
+    shell: updatedb
+
+#Zabbix cosas
+  - name: instalar repo de zabbix
+    yum: name=http://repo.zabbix.com/zabbix/3.2/rhel/7/x86_64/zabbix-release-3.2-1.el7.noarch.rpm state=present
+  - name: instalar agente de zabbix
+    yum: name=zabbix-agent state=present
+  - name: descargar config agente
+    get_url:
+      url: http://128.64.80.50/root/ansible/raw/master/zabbix_agentd.conf
+      dest: /etc/zabbix/zabbix_agentd.conf
+      mode: 0644
+      force: yes
+    register: zabbix_agentd
+  - name: habilitar agente zabbix
+    service: name=zabbix-agent enabled=yes
+  - name: reiniciar agente zabbix
+    service: name=zabbix-agent state=restarted
